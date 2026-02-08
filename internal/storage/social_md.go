@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/harper/suite/mdstore"
+	"github.com/harperreed/mdstore"
 	"gopkg.in/yaml.v3"
 
 	"github.com/2389-research/pulse/internal/models"

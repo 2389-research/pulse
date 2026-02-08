@@ -9,7 +9,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/google/uuid v1.6.0
-	github.com/harper/suite/mdstore v0.0.0-00010101000000-000000000000
+	github.com/harperreed/mdstore v0.1.0
 	github.com/modelcontextprotocol/go-sdk v1.1.0
 	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1
@@ -43,5 +43,3 @@ require (
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.3.8 // indirect
 )
-
-replace github.com/harper/suite/mdstore => ../mdstore

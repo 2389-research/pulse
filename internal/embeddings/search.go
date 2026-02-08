@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/harper/suite/mdstore"
+	"github.com/harperreed/mdstore"
 
 	"github.com/2389-research/pulse/internal/models"
 )
