@@ -1,0 +1,10 @@
+bin/
+/pulse
+*.exe
+*.dll
+*.so
+*.dylib
+.private-journal/
+coverage.out
+coverage.html
+dist/
