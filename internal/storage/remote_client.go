@@ -15,6 +15,28 @@ import (
 	"github.com/google/uuid"
 )
 
+// maxResponseBytes caps how much of an HTTP response body we will read into
+// memory. Prevents OOM when a remote server sends unexpectedly large payloads.
+const maxResponseBytes = 1 << 20 // 1 MiB
+
+// maxErrorBodyLen caps the length of response body text included in error messages.
+const maxErrorBodyLen = 1024
+
+// limitedReadBody reads up to maxResponseBytes from r and returns the bytes.
+func limitedReadBody(r io.Reader) ([]byte, error) {
+	return io.ReadAll(io.LimitReader(r, maxResponseBytes))
+}
+
+// truncatedErrorBody reads a limited response body and truncates it for use
+// in error messages so that unexpectedly large responses don't bloat errors.
+func truncatedErrorBody(r io.Reader) string {
+	b, _ := limitedReadBody(r)
+	if len(b) > maxErrorBodyLen {
+		return string(b[:maxErrorBodyLen]) + "...(truncated)"
+	}
+	return string(b)
+}
+
 // RemoteClient posts social media content to a remote API.
 type RemoteClient struct {
 	apiURL string
@@ -99,8 +121,7 @@ func (r *RemoteClient) CreateJournalEntry(sections map[string]string, timestamp 
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("remote API returned %d: %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("remote API returned %d: %s", resp.StatusCode, truncatedErrorBody(resp.Body))
 	}
 
 	return nil
@@ -144,12 +165,11 @@ func (r *RemoteClient) ReadJournalEntries(limit int) ([]*models.JournalEntry, er
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("remote API returned %d: %s", resp.StatusCode, string(respBody))
+		return nil, fmt.Errorf("remote API returned %d: %s", resp.StatusCode, truncatedErrorBody(resp.Body))
 	}
 
 	var listResp remoteJournalListResponse
-	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBytes)).Decode(&listResp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
@@ -202,8 +222,7 @@ func (r *RemoteClient) CreatePost(post *models.SocialPost) error {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("remote API returned %d: %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("remote API returned %d: %s", resp.StatusCode, truncatedErrorBody(resp.Body))
 	}
 
 	return nil
@@ -242,12 +261,11 @@ func (r *RemoteClient) ReadPosts(opts ListPostsOptions) ([]*models.SocialPost, e
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("remote API returned %d: %s", resp.StatusCode, string(respBody))
+		return nil, fmt.Errorf("remote API returned %d: %s", resp.StatusCode, truncatedErrorBody(resp.Body))
 	}
 
 	var listResp remoteListResponse
-	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBytes)).Decode(&listResp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 

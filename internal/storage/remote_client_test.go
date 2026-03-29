@@ -384,3 +384,54 @@ func TestRemoteClientStripsV1Suffix(t *testing.T) {
 		t.Errorf("expected /teams/myteam/posts (v1 stripped), got %s", receivedPath)
 	}
 }
+
+func TestRemoteClientRejectsOversizedErrorBody(t *testing.T) {
+	// Server returns 500 with a 2 MiB body, well over the 1 MiB limit.
+	oversizedBody := strings.Repeat("X", 2*1024*1024)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(oversizedBody))
+	}))
+	defer server.Close()
+
+	client := NewRemoteClient(server.URL, "key", "team")
+
+	// Test all four methods that read error bodies.
+
+	// CreateJournalEntry
+	err := client.CreateJournalEntry(map[string]string{"feelings": "test"}, time.Now())
+	if err == nil {
+		t.Fatal("expected error from CreateJournalEntry")
+	}
+	if len(err.Error()) >= 2048 {
+		t.Errorf("CreateJournalEntry error message too long: %d bytes (should be < 2048)", len(err.Error()))
+	}
+
+	// CreatePost
+	post := models.NewSocialPost("agent", "test", nil, nil)
+	err = client.CreatePost(post)
+	if err == nil {
+		t.Fatal("expected error from CreatePost")
+	}
+	if len(err.Error()) >= 2048 {
+		t.Errorf("CreatePost error message too long: %d bytes (should be < 2048)", len(err.Error()))
+	}
+
+	// ReadJournalEntries
+	_, err = client.ReadJournalEntries(10)
+	if err == nil {
+		t.Fatal("expected error from ReadJournalEntries")
+	}
+	if len(err.Error()) >= 2048 {
+		t.Errorf("ReadJournalEntries error message too long: %d bytes (should be < 2048)", len(err.Error()))
+	}
+
+	// ReadPosts
+	_, err = client.ReadPosts(ListPostsOptions{})
+	if err == nil {
+		t.Fatal("expected error from ReadPosts")
+	}
+	if len(err.Error()) >= 2048 {
+		t.Errorf("ReadPosts error message too long: %d bytes (should be < 2048)", len(err.Error()))
+	}
+}
