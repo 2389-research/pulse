@@ -354,6 +354,46 @@ func TestJournalReadEntryPathTraversal(t *testing.T) {
 	}
 }
 
+func TestReadEntryRejectsSymlinkTraversal(t *testing.T) {
+	projectDir := t.TempDir()
+	userDir := t.TempDir()
+
+	store, err := NewJournalMDStore(projectDir, userDir)
+	if err != nil {
+		t.Fatalf("NewJournalMDStore error: %v", err)
+	}
+
+	// Write a valid entry to get a real journal file we can symlink to
+	outsideStore, err := NewJournalMDStore(t.TempDir(), t.TempDir())
+	if err != nil {
+		t.Fatalf("NewJournalMDStore (outside) error: %v", err)
+	}
+	outsideEntry := models.NewJournalEntry(map[string]string{
+		"feelings": "secret data",
+	}, "project")
+	if err := outsideStore.WriteEntry(outsideEntry); err != nil {
+		t.Fatalf("WriteEntry (outside) error: %v", err)
+	}
+
+	// Create a symlink inside the journal root pointing to the outside entry
+	dateDir := filepath.Join(projectDir, "2026-03-28")
+	if err := os.MkdirAll(dateDir, 0o750); err != nil {
+		t.Fatalf("failed to create date dir: %v", err)
+	}
+	symlink := filepath.Join(dateDir, "evil-link.md")
+	if err := os.Symlink(outsideEntry.FilePath, symlink); err != nil {
+		t.Fatalf("failed to create symlink: %v", err)
+	}
+
+	_, err = store.ReadEntry(symlink)
+	if err == nil {
+		t.Fatal("expected error for symlink traversal, got nil")
+	}
+	if !strings.Contains(err.Error(), "outside journal roots") {
+		t.Errorf("expected 'outside journal roots' error, got: %v", err)
+	}
+}
+
 func TestJournalEmptyRoots(t *testing.T) {
 	tmpDir := t.TempDir()
 	projectDir := filepath.Join(tmpDir, "nonexistent-project")

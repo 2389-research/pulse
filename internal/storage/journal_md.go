@@ -81,8 +81,21 @@ func (s *JournalMDStore) ReadEntry(path string) (*models.JournalEntry, error) {
 		return nil, fmt.Errorf("invalid path: %w", err)
 	}
 
+	// Resolve symlinks to prevent traversal via symlink targets outside roots
+	absPath, err = filepath.EvalSymlinks(absPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve path: %w", err)
+	}
+
+	// Resolve symlinks in roots too, in case the journal root itself contains symlinks
 	absProject, _ := filepath.Abs(s.projectPath)
 	absUser, _ := filepath.Abs(s.userPath)
+	if resolved, err := filepath.EvalSymlinks(absProject); err == nil {
+		absProject = resolved
+	}
+	if resolved, err := filepath.EvalSymlinks(absUser); err == nil {
+		absUser = resolved
+	}
 
 	if !strings.HasPrefix(absPath, absProject+string(filepath.Separator)) &&
 		!strings.HasPrefix(absPath, absUser+string(filepath.Separator)) {
