@@ -41,7 +41,10 @@ func runSetup(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("TUI error: %w", err)
 	}
 
-	final := result.(tui.SetupModel)
+	final, ok := result.(tui.SetupModel)
+	if !ok {
+		return fmt.Errorf("setup wizard returned unexpected state")
+	}
 	if !final.ShouldSave() {
 		fmt.Println("Setup cancelled.")
 		return nil
