@@ -121,7 +121,9 @@ func Load() (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return &Config{}, nil
+			cfg := &Config{}
+			applyEnvOverrides(cfg)
+			return cfg, nil
 		}
 		return nil, err
 	}
@@ -130,7 +132,22 @@ func Load() (*Config, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
+	applyEnvOverrides(&cfg)
 	return &cfg, nil
+}
+
+// applyEnvOverrides layers environment variables on top of the loaded config.
+// PULSE_API_KEY, PULSE_TEAM_ID, and PULSE_API_URL override their yaml counterparts.
+func applyEnvOverrides(cfg *Config) {
+	if v := os.Getenv("PULSE_API_KEY"); v != "" {
+		cfg.Social.APIKey = v
+	}
+	if v := os.Getenv("PULSE_TEAM_ID"); v != "" {
+		cfg.Social.TeamID = v
+	}
+	if v := os.Getenv("PULSE_API_URL"); v != "" {
+		cfg.Social.APIURL = v
+	}
 }
 
 // Save writes config to disk.

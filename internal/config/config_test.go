@@ -156,6 +156,82 @@ func TestHasRemotePartial(t *testing.T) {
 	}
 }
 
+func TestEnvVarOverrides(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Write a config file with placeholder values
+	configDir := filepath.Join(tmpDir, "pulse")
+	if err := os.MkdirAll(configDir, 0750); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
+	}
+	configData := `social:
+  api_key: "yaml-key"
+  team_id: "yaml-team"
+  api_url: "https://yaml.example.com"
+`
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(configData), 0600); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	t.Run("env vars override yaml values", func(t *testing.T) {
+		t.Setenv("PULSE_API_KEY", "env-key")
+		t.Setenv("PULSE_TEAM_ID", "env-team")
+		t.Setenv("PULSE_API_URL", "https://env.example.com")
+
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load() error: %v", err)
+		}
+		if cfg.Social.APIKey != "env-key" {
+			t.Errorf("expected api_key 'env-key', got %q", cfg.Social.APIKey)
+		}
+		if cfg.Social.TeamID != "env-team" {
+			t.Errorf("expected team_id 'env-team', got %q", cfg.Social.TeamID)
+		}
+		if cfg.Social.APIURL != "https://env.example.com" {
+			t.Errorf("expected api_url 'https://env.example.com', got %q", cfg.Social.APIURL)
+		}
+	})
+
+	t.Run("partial env vars override only set fields", func(t *testing.T) {
+		t.Setenv("PULSE_API_KEY", "env-key-only")
+
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load() error: %v", err)
+		}
+		if cfg.Social.APIKey != "env-key-only" {
+			t.Errorf("expected api_key 'env-key-only', got %q", cfg.Social.APIKey)
+		}
+		if cfg.Social.TeamID != "yaml-team" {
+			t.Errorf("expected team_id 'yaml-team', got %q", cfg.Social.TeamID)
+		}
+		if cfg.Social.APIURL != "https://yaml.example.com" {
+			t.Errorf("expected api_url 'https://yaml.example.com', got %q", cfg.Social.APIURL)
+		}
+	})
+
+	t.Run("env vars work with no config file", func(t *testing.T) {
+		emptyDir := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", emptyDir)
+		t.Setenv("PULSE_API_KEY", "env-only-key")
+		t.Setenv("PULSE_TEAM_ID", "env-only-team")
+		t.Setenv("PULSE_API_URL", "https://env-only.example.com")
+
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load() error: %v", err)
+		}
+		if !cfg.HasRemote() {
+			t.Error("expected HasRemote() to be true with env vars")
+		}
+		if cfg.Social.APIKey != "env-only-key" {
+			t.Errorf("expected api_key 'env-only-key', got %q", cfg.Social.APIKey)
+		}
+	})
+}
+
 func TestDefaultPaths(t *testing.T) {
 	cfg := &Config{}
 	home, _ := os.UserHomeDir()
