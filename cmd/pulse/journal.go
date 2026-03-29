@@ -120,6 +120,14 @@ func runJournalWrite(cmd *cobra.Command, args []string) error {
 func runJournalSearch(cmd *cobra.Command, args []string) error {
 	query := args[0]
 
+	validTypes := map[string]bool{"project": true, "user": true, "both": true, "": true}
+	if !validTypes[journalType] {
+		return fmt.Errorf("invalid --type %q: must be one of: project, user, both", journalType)
+	}
+	if journalLimit < 0 {
+		return fmt.Errorf("--limit must be non-negative, got %d", journalLimit)
+	}
+
 	entries, err := globalJournalStore.ListEntries(journalType, 0, 0)
 	if err != nil {
 		return fmt.Errorf("failed to list entries: %w", err)
@@ -171,6 +179,14 @@ func runJournalSearch(cmd *cobra.Command, args []string) error {
 }
 
 func runJournalList(cmd *cobra.Command, args []string) error {
+	validTypes := map[string]bool{"project": true, "user": true, "both": true, "": true}
+	if !validTypes[journalType] {
+		return fmt.Errorf("invalid --type %q: must be one of: project, user, both", journalType)
+	}
+	if journalLimit < 0 {
+		return fmt.Errorf("--limit must be non-negative, got %d", journalLimit)
+	}
+
 	entries, err := globalJournalStore.ListEntries(journalType, journalLimit, journalDays)
 	if err != nil {
 		return fmt.Errorf("failed to list entries: %w", err)

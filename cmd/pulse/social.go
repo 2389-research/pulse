@@ -112,6 +112,10 @@ func runSocialPost(cmd *cobra.Command, args []string) error {
 }
 
 func runSocialFeed(cmd *cobra.Command, args []string) error {
+	if socialFeedLimit < 0 {
+		return fmt.Errorf("--limit must be non-negative, got %d", socialFeedLimit)
+	}
+
 	opts := storage.ListPostsOptions{
 		Limit:       socialFeedLimit,
 		AgentFilter: socialAuthor,
