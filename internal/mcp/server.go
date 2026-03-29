@@ -30,7 +30,7 @@ func WithRemoteClient(rc *storage.RemoteClient) ServerOption {
 }
 
 // NewServer creates an MCP server with journal and social capabilities.
-func NewServer(journal storage.JournalStore, social storage.SocialStore, opts ...ServerOption) (*Server, error) {
+func NewServer(journal storage.JournalStore, social storage.SocialStore, version string, opts ...ServerOption) (*Server, error) {
 	if journal == nil {
 		return nil, fmt.Errorf("journal store is required")
 	}
@@ -38,10 +38,14 @@ func NewServer(journal storage.JournalStore, social storage.SocialStore, opts ..
 		return nil, fmt.Errorf("social store is required")
 	}
 
+	if version == "" {
+		version = "dev"
+	}
+
 	mcpServer := gomcp.NewServer(
 		&gomcp.Implementation{
 			Name:    "pulse",
-			Version: "1.0.0",
+			Version: version,
 		},
 		nil,
 	)

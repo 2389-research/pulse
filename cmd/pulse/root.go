@@ -32,7 +32,7 @@ var rootCmd = &cobra.Command{
 Private journaling and social media for humans and agents.
 Local-first with optional remote sync.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if cmd.Name() == "help" || cmd.Name() == "version" || cmd.Name() == "setup" {
+		if cmd.Name() == "help" || cmd.Name() == "setup" {
 			return nil
 		}
 

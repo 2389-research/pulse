@@ -12,7 +12,7 @@ func TestNewServerRequiresJournalStore(t *testing.T) {
 	tmpDir := t.TempDir()
 	social, _ := storage.NewSocialMDStore(tmpDir)
 
-	_, err := NewServer(nil, social)
+	_, err := NewServer(nil, social, "test")
 	if err == nil {
 		t.Error("expected error when journal store is nil")
 	}
@@ -22,7 +22,7 @@ func TestNewServerRequiresSocialStore(t *testing.T) {
 	tmpDir := t.TempDir()
 	journal, _ := storage.NewJournalMDStore(tmpDir, tmpDir)
 
-	_, err := NewServer(journal, nil)
+	_, err := NewServer(journal, nil, "test")
 	if err == nil {
 		t.Error("expected error when social store is nil")
 	}
@@ -33,7 +33,7 @@ func TestNewServerSuccess(t *testing.T) {
 	journal, _ := storage.NewJournalMDStore(tmpDir, tmpDir)
 	social, _ := storage.NewSocialMDStore(tmpDir)
 
-	server, err := NewServer(journal, social)
+	server, err := NewServer(journal, social, "test")
 	if err != nil {
 		t.Fatalf("NewServer error: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestNewServerWithRemote(t *testing.T) {
 	social, _ := storage.NewSocialMDStore(tmpDir)
 	remote := storage.NewRemoteClient("http://example.com", "key", "team")
 
-	server, err := NewServer(journal, social, WithRemoteClient(remote))
+	server, err := NewServer(journal, social, "test", WithRemoteClient(remote))
 	if err != nil {
 		t.Fatalf("NewServer error: %v", err)
 	}

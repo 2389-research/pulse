@@ -18,7 +18,7 @@ func makeSocialServer(t *testing.T) *Server {
 		filepath.Join(tmpDir, "user"),
 	)
 	social, _ := storage.NewSocialMDStore(filepath.Join(tmpDir, "social"))
-	server, err := NewServer(journal, social)
+	server, err := NewServer(journal, social, "test")
 	if err != nil {
 		t.Fatalf("NewServer error: %v", err)
 	}

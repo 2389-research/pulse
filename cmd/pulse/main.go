@@ -1,5 +1,5 @@
 // ABOUTME: Entry point for the pulse binary.
-// ABOUTME: Executes the root Cobra command.
+// ABOUTME: Declares build-injected version variables and runs the root command.
 package main
 
 import (
@@ -7,9 +7,16 @@ import (
 	"os"
 )
 
+// Build-injected via ldflags.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
+	rootCmd.Version = fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date)
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

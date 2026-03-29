@@ -38,7 +38,7 @@ func runMCP(cmd *cobra.Command, args []string) error {
 		opts = append(opts, mcppkg.WithRemoteClient(remote))
 	}
 
-	server, err := mcppkg.NewServer(globalJournalStore, globalSocialStore, opts...)
+	server, err := mcppkg.NewServer(globalJournalStore, globalSocialStore, version, opts...)
 	if err != nil {
 		return err
 	}

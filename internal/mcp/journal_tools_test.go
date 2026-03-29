@@ -25,7 +25,7 @@ func makeJournalServer(t *testing.T) *Server {
 		filepath.Join(tmpDir, "user"),
 	)
 	social, _ := storage.NewSocialMDStore(filepath.Join(tmpDir, "social"))
-	server, err := NewServer(journal, social)
+	server, err := NewServer(journal, social, "test")
 	if err != nil {
 		t.Fatalf("NewServer error: %v", err)
 	}
@@ -350,7 +350,7 @@ func makeJournalServerWithRemote(t *testing.T, handler http.Handler) *Server {
 	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)
 	remote := storage.NewRemoteClient(ts.URL, "test-key", "test-team")
-	server, err := NewServer(journal, social, WithRemoteClient(remote))
+	server, err := NewServer(journal, social, "test", WithRemoteClient(remote))
 	if err != nil {
 		t.Fatalf("NewServer error: %v", err)
 	}
