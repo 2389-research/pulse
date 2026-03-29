@@ -3,9 +3,11 @@
 package storage
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -336,5 +338,80 @@ func TestSocialEmptyStore(t *testing.T) {
 	}
 	if len(posts) != 0 {
 		t.Errorf("expected 0 posts from empty store, got %d", len(posts))
+	}
+}
+
+func TestConcurrentSetIdentity(t *testing.T) {
+	dir := t.TempDir()
+	store, err := NewSocialMDStore(dir)
+	if err != nil {
+		t.Fatalf("NewSocialMDStore error: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			err := store.SetIdentity(fmt.Sprintf("agent-%d", n))
+			if err != nil {
+				t.Errorf("SetIdentity(%d) error: %v", n, err)
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	name, err := store.GetIdentity()
+	if err != nil {
+		t.Fatalf("GetIdentity error: %v", err)
+	}
+	if name == "" {
+		t.Error("expected non-empty identity after concurrent writes")
+	}
+}
+
+func TestConcurrentMarkSynced(t *testing.T) {
+	dir := t.TempDir()
+	store, err := NewSocialMDStore(dir)
+	if err != nil {
+		t.Fatalf("NewSocialMDStore error: %v", err)
+	}
+
+	// Create posts to mark synced concurrently
+	var posts []*models.SocialPost
+	for i := 0; i < 10; i++ {
+		post := &models.SocialPost{
+			ID:         uuid.New(),
+			AuthorName: "agent",
+			Content:    fmt.Sprintf("Post %d", i),
+			CreatedAt:  time.Now().Add(time.Duration(i) * time.Second),
+		}
+		if err := store.CreatePost(post); err != nil {
+			t.Fatalf("CreatePost error: %v", err)
+		}
+		posts = append(posts, post)
+	}
+
+	var wg sync.WaitGroup
+	for _, p := range posts {
+		wg.Add(1)
+		go func(id string) {
+			defer wg.Done()
+			if err := store.MarkSynced(id); err != nil {
+				t.Errorf("MarkSynced(%s) error: %v", id, err)
+			}
+		}(p.ID.String())
+	}
+	wg.Wait()
+
+	// Verify all posts are synced
+	listed, err := store.ListPosts(ListPostsOptions{Limit: 20})
+	if err != nil {
+		t.Fatalf("ListPosts error: %v", err)
+	}
+	for _, p := range listed {
+		if !p.Synced {
+			t.Errorf("post %s should be synced", p.ID)
+		}
 	}
 }

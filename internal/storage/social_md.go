@@ -170,8 +170,10 @@ func (s *SocialMDStore) GetIdentity() (string, error) {
 
 // SetIdentity persists the agent name.
 func (s *SocialMDStore) SetIdentity(name string) error {
-	path := filepath.Join(s.dataDir, "_identity.yaml")
-	return mdstore.WriteYAML(path, &identityFile{AgentName: name})
+	return mdstore.WithLock(s.dataDir, func() error {
+		path := filepath.Join(s.dataDir, "_identity.yaml")
+		return mdstore.WriteYAML(path, &identityFile{AgentName: name})
+	})
 }
 
 // errPostFound is a sentinel used to short-circuit filepath.Walk after finding the target post.
@@ -181,56 +183,62 @@ var errPostFound = fmt.Errorf("post found")
 // Returns an error if the post is not found.
 func (s *SocialMDStore) MarkSynced(postID string) error {
 	postsDir := filepath.Join(s.dataDir, "posts")
-	found := false
+	if err := mdstore.EnsureDir(postsDir); err != nil {
+		return fmt.Errorf("failed to ensure posts dir: %w", err)
+	}
 
-	walkErr := filepath.Walk(postsDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
+	return mdstore.WithLock(postsDir, func() error {
+		found := false
+
+		walkErr := filepath.Walk(postsDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
+				return nil
+			}
+
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return nil
+			}
+
+			yamlStr, body := mdstore.ParseFrontmatter(string(data))
+			if yamlStr == "" {
+				return nil
+			}
+
+			var fm socialFrontmatter
+			if err := yaml.Unmarshal([]byte(yamlStr), &fm); err != nil {
+				return nil
+			}
+
+			if fm.ID != postID {
+				return nil
+			}
+
+			// Found it - rewrite with synced: true
+			found = true
+			fm.Synced = true
+			content, err := mdstore.RenderFrontmatter(fm, body)
+			if err != nil {
+				return err
+			}
+
+			if err := mdstore.AtomicWrite(path, []byte(content)); err != nil {
+				return err
+			}
+
+			return errPostFound
+		})
+
+		if walkErr != nil && walkErr != errPostFound {
+			return walkErr
 		}
 
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return nil
+		if !found {
+			return fmt.Errorf("post %s not found", postID)
 		}
 
-		yamlStr, body := mdstore.ParseFrontmatter(string(data))
-		if yamlStr == "" {
-			return nil
-		}
-
-		var fm socialFrontmatter
-		if err := yaml.Unmarshal([]byte(yamlStr), &fm); err != nil {
-			return nil
-		}
-
-		if fm.ID != postID {
-			return nil
-		}
-
-		// Found it - rewrite with synced: true
-		found = true
-		fm.Synced = true
-		content, err := mdstore.RenderFrontmatter(fm, body)
-		if err != nil {
-			return err
-		}
-
-		if err := mdstore.AtomicWrite(path, []byte(content)); err != nil {
-			return err
-		}
-
-		return errPostFound
+		return nil
 	})
-
-	if walkErr != nil && walkErr != errPostFound {
-		return walkErr
-	}
-
-	if !found {
-		return fmt.Errorf("post %s not found", postID)
-	}
-
-	return nil
 }
 
 // Close releases any resources held by the store.
