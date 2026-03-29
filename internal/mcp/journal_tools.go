@@ -26,7 +26,8 @@ func (s *Server) registerJournalTools() {
 				"user_context": {"type": "string", "description": "Private field notes about working with your human collaborator."},
 				"technical_insights": {"type": "string", "description": "Private software engineering notebook for broader learnings."},
 				"world_knowledge": {"type": "string", "description": "Private learning journal for everything else interesting or useful."}
-			}
+			},
+			"minProperties": 1
 		}`),
 	}, s.handleProcessThoughts)
 
@@ -170,6 +171,9 @@ func (s *Server) handleSearchJournal(ctx context.Context, req *gomcp.CallToolReq
 	if args.Query == "" {
 		return toolError("query is required"), nil
 	}
+	if args.Type != "" && args.Type != "project" && args.Type != "user" && args.Type != "both" {
+		return toolError("invalid type %q: must be one of: project, user, both", args.Type), nil
+	}
 	if args.Limit <= 0 {
 		args.Limit = 10
 	}
@@ -276,6 +280,9 @@ func (s *Server) handleListRecentEntries(ctx context.Context, req *gomcp.CallToo
 		return toolError("invalid arguments: %v", err), nil
 	}
 
+	if args.Type != "" && args.Type != "project" && args.Type != "user" && args.Type != "both" {
+		return toolError("invalid type %q: must be one of: project, user, both", args.Type), nil
+	}
 	if args.Days <= 0 {
 		args.Days = 30
 	}

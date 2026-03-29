@@ -461,6 +461,38 @@ func TestProcessThoughtsUnknownSection(t *testing.T) {
 	}
 }
 
+func TestProcessThoughtsRejectsEmpty(t *testing.T) {
+	s := makeJournalServer(t)
+	result := callTool(t, s, "process_thoughts", map[string]any{})
+
+	if !result.IsError {
+		t.Error("expected error for empty process_thoughts, got success")
+	}
+}
+
+func TestSearchJournalRejectsInvalidType(t *testing.T) {
+	s := makeJournalServer(t)
+	result := callTool(t, s, "search_journal", map[string]any{
+		"query": "test",
+		"type":  "invalid",
+	})
+
+	if !result.IsError {
+		t.Error("expected error for invalid type enum, got success")
+	}
+}
+
+func TestListRecentEntriesRejectsInvalidType(t *testing.T) {
+	s := makeJournalServer(t)
+	result := callTool(t, s, "list_recent_entries", map[string]any{
+		"type": "invalid",
+	})
+
+	if !result.IsError {
+		t.Error("expected error for invalid type enum, got success")
+	}
+}
+
 func TestListRecentEntriesEmpty(t *testing.T) {
 	s := makeJournalServer(t)
 
