@@ -435,3 +435,53 @@ func TestRemoteClientRejectsOversizedErrorBody(t *testing.T) {
 		t.Errorf("ReadPosts error message too long: %d bytes (should be < 2048)", len(err.Error()))
 	}
 }
+
+func TestRemoteClientEscapesTeamID(t *testing.T) {
+	// A teamID with slashes and special characters must be URL-escaped so
+	// it doesn't break the API path structure.
+	var capturedRawPaths []string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// RawPath preserves percent-encoding; Path is the decoded version.
+		// Use RequestURI to see exactly what the client sent on the wire.
+		capturedRawPaths = append(capturedRawPaths, r.RequestURI)
+		w.Header().Set("Content-Type", "application/json")
+		switch r.Method {
+		case "POST":
+			w.WriteHeader(http.StatusCreated)
+		default:
+			if strings.Contains(r.RequestURI, "journal") {
+				_ = json.NewEncoder(w).Encode(remoteJournalListResponse{})
+			} else {
+				_ = json.NewEncoder(w).Encode(remoteListResponse{})
+			}
+		}
+	}))
+	defer server.Close()
+
+	dangerousTeamID := "team/../../etc/passwd"
+	client := NewRemoteClient(server.URL, "key", dangerousTeamID)
+
+	// Exercise all four endpoints.
+	_ = client.CreateJournalEntry(map[string]string{"feelings": "test"}, time.Now())
+	_, _ = client.ReadJournalEntries(5)
+	post := models.NewSocialPost("agent", "test", nil, nil)
+	_ = client.CreatePost(post)
+	_, _ = client.ReadPosts(ListPostsOptions{})
+
+	if len(capturedRawPaths) != 4 {
+		t.Fatalf("expected 4 requests, got %d", len(capturedRawPaths))
+	}
+
+	// The escaped team ID should contain %2F instead of literal slashes
+	// within the team ID segment, preventing path traversal.
+	escapedTeamID := "team%2F..%2F..%2Fetc%2Fpasswd"
+	for i, rawPath := range capturedRawPaths {
+		if strings.Contains(rawPath, "../../") {
+			t.Errorf("request %d: path traversal not escaped: %s", i, rawPath)
+		}
+		if !strings.Contains(rawPath, "/teams/"+escapedTeamID) {
+			t.Errorf("request %d: expected escaped team ID in path, got %s", i, rawPath)
+		}
+	}
+}

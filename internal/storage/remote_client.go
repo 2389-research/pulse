@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -55,6 +56,12 @@ func NewRemoteClient(apiURL, apiKey, teamID string) *RemoteClient {
 		teamID: teamID,
 		client: &http.Client{Timeout: 30 * time.Second},
 	}
+}
+
+// teamPath returns the base URL path for team-scoped API endpoints,
+// with the team ID properly escaped to prevent path traversal.
+func (r *RemoteClient) teamPath() string {
+	return r.apiURL + "/teams/" + url.PathEscape(r.teamID)
 }
 
 // remotePostPayload is the JSON body sent to the remote API.
@@ -107,7 +114,7 @@ func (r *RemoteClient) CreateJournalEntry(sections map[string]string, timestamp 
 		return fmt.Errorf("failed to marshal journal entry: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", r.apiURL+"/teams/"+r.teamID+"/journal/entries", bytes.NewReader(body))
+	req, err := http.NewRequest("POST", r.teamPath()+"/journal/entries", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -146,7 +153,7 @@ type remoteJournalListResponse struct {
 
 // ReadJournalEntries fetches journal entries from the remote API.
 func (r *RemoteClient) ReadJournalEntries(limit int) ([]*models.JournalEntry, error) {
-	req, err := http.NewRequest("GET", r.apiURL+"/teams/"+r.teamID+"/journal/entries", nil)
+	req, err := http.NewRequest("GET", r.teamPath()+"/journal/entries", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -208,7 +215,7 @@ func (r *RemoteClient) CreatePost(post *models.SocialPost) error {
 		return fmt.Errorf("failed to marshal post: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", r.apiURL+"/teams/"+r.teamID+"/posts", bytes.NewReader(body))
+	req, err := http.NewRequest("POST", r.teamPath()+"/posts", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -230,7 +237,7 @@ func (r *RemoteClient) CreatePost(post *models.SocialPost) error {
 
 // ReadPosts fetches posts from the remote API.
 func (r *RemoteClient) ReadPosts(opts ListPostsOptions) ([]*models.SocialPost, error) {
-	req, err := http.NewRequest("GET", r.apiURL+"/teams/"+r.teamID+"/posts", nil)
+	req, err := http.NewRequest("GET", r.teamPath()+"/posts", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
