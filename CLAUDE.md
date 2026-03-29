@@ -49,7 +49,6 @@ go test ./...
 - Journal (user): `~/.private-journal/`
 - Journal (project): `.private-journal/` (relative to cwd)
 - Config: `~/.config/pulse/config.yaml`
-- Embedding models: `~/.local/share/pulse/models/`
 - Port (if HTTP needed): `7453` (PULS leet-adjacent)
 
 ## Config
@@ -71,4 +70,3 @@ journal:
 - `mdstore` - Frontmatter, atomic writes, locking
 - `uuid` - ID generation
 - `yaml.v3` - Config/frontmatter
-- `fastembed-go` - Local ONNX embeddings (Phase 6)
