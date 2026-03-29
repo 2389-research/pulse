@@ -11,7 +11,7 @@ import (
 	"github.com/2389-research/pulse/internal/storage"
 )
 
-var globalConfig *config.Config
+var globalConfig *config.Config //nolint:unused // reserved for future use
 var globalJournalStore storage.JournalStore
 var globalSocialStore storage.SocialStore
 var globalRemoteClient *storage.RemoteClient

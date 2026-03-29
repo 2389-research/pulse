@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/cobra"
 
 	mcppkg "github.com/2389-research/pulse/internal/mcp"
-	"github.com/2389-research/pulse/internal/storage"
 )
 
 var mcpCmd = &cobra.Command{
@@ -33,9 +32,8 @@ func runMCP(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	var opts []mcppkg.ServerOption
-	if globalConfig != nil && globalConfig.HasRemote() {
-		remote := storage.NewRemoteClient(globalConfig.Social.APIURL, globalConfig.Social.APIKey, globalConfig.Social.TeamID)
-		opts = append(opts, mcppkg.WithRemoteClient(remote))
+	if globalRemoteClient != nil {
+		opts = append(opts, mcppkg.WithRemoteClient(globalRemoteClient))
 	}
 
 	server, err := mcppkg.NewServer(globalJournalStore, globalSocialStore, version, opts...)
