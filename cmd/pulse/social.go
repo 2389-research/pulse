@@ -123,7 +123,7 @@ func runSocialFeed(cmd *cobra.Command, args []string) error {
 
 	if globalConfig != nil && globalConfig.HasRemote() {
 		remote := storage.NewRemoteClient(globalConfig.Social.APIURL, globalConfig.Social.APIKey, globalConfig.Social.TeamID)
-		posts, err = remote.ReadPosts(opts)
+		posts, err = remote.ReadPosts(cmd.Context(), opts)
 	} else {
 		posts, err = globalSocialStore.ListPosts(opts)
 	}

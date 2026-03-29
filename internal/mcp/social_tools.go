@@ -119,7 +119,7 @@ func (s *Server) handleCreatePost(ctx context.Context, req *gomcp.CallToolReques
 
 	// Sync to remote if configured
 	if s.remote != nil {
-		if err := s.remote.CreatePost(post); err != nil {
+		if err := s.remote.CreatePost(ctx, post); err != nil {
 			// Local write succeeded, remote failed - note but don't error
 			return &gomcp.CallToolResult{
 				Content: []gomcp.Content{&gomcp.TextContent{

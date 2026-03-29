@@ -3,6 +3,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -36,7 +37,7 @@ func TestRemoteClientCreatePost(t *testing.T) {
 	client := NewRemoteClient(server.URL, "test-api-key", "test-team-id")
 	post := models.NewSocialPost("turbo_gecko", "Hello remote!", []string{"test"}, nil)
 
-	err := client.CreatePost(post)
+	err := client.CreatePost(context.Background(), post)
 	if err != nil {
 		t.Fatalf("CreatePost error: %v", err)
 	}
@@ -70,7 +71,7 @@ func TestRemoteClientCreatePostError(t *testing.T) {
 	client := NewRemoteClient(server.URL, "key", "team")
 	post := models.NewSocialPost("agent", "test", nil, nil)
 
-	err := client.CreatePost(post)
+	err := client.CreatePost(context.Background(), post)
 	if err == nil {
 		t.Fatal("expected error for 500 response")
 	}
@@ -105,7 +106,7 @@ func TestRemoteClientReadPosts(t *testing.T) {
 	defer server.Close()
 
 	client := NewRemoteClient(server.URL, "key", "team")
-	posts, err := client.ReadPosts(ListPostsOptions{
+	posts, err := client.ReadPosts(context.Background(), ListPostsOptions{
 		Limit:       5,
 		AgentFilter: "agent1",
 	})
@@ -142,7 +143,7 @@ func TestRemoteClientReadPostsError(t *testing.T) {
 	defer server.Close()
 
 	client := NewRemoteClient(server.URL, "bad-key", "team")
-	_, err := client.ReadPosts(ListPostsOptions{})
+	_, err := client.ReadPosts(context.Background(), ListPostsOptions{})
 	if err == nil {
 		t.Fatal("expected error for 401 response")
 	}
@@ -153,7 +154,7 @@ func TestRemoteClientConnectionError(t *testing.T) {
 	client := NewRemoteClient("http://localhost:1", "key", "team")
 	post := models.NewSocialPost("agent", "test", nil, nil)
 
-	err := client.CreatePost(post)
+	err := client.CreatePost(context.Background(), post)
 	if err == nil {
 		t.Fatal("expected error for connection failure")
 	}
@@ -171,7 +172,7 @@ func TestRemoteClientQueryParams(t *testing.T) {
 	defer server.Close()
 
 	client := NewRemoteClient(server.URL, "key", "team")
-	_, err := client.ReadPosts(ListPostsOptions{
+	_, err := client.ReadPosts(context.Background(), ListPostsOptions{
 		Limit:       10,
 		AgentFilter: "bob",
 		TagFilter:   "fun",
@@ -217,7 +218,7 @@ func TestRemoteClientCreateJournalEntry(t *testing.T) {
 	}
 	timestamp := time.Date(2024, 6, 1, 12, 30, 45, 123000000, time.UTC)
 
-	err := client.CreateJournalEntry(sections, timestamp)
+	err := client.CreateJournalEntry(context.Background(), sections, timestamp)
 	if err != nil {
 		t.Fatalf("CreateJournalEntry error: %v", err)
 	}
@@ -263,7 +264,7 @@ func TestRemoteClientCreateJournalEntryError(t *testing.T) {
 	defer server.Close()
 
 	client := NewRemoteClient(server.URL, "key", "team")
-	err := client.CreateJournalEntry(map[string]string{"feelings": "test"}, time.Now())
+	err := client.CreateJournalEntry(context.Background(), map[string]string{"feelings": "test"}, time.Now())
 	if err == nil {
 		t.Fatal("expected error for 500 response")
 	}
@@ -316,7 +317,7 @@ func TestRemoteClientReadJournalEntries(t *testing.T) {
 	defer server.Close()
 
 	client := NewRemoteClient(server.URL, "test-key", "test-team")
-	entries, err := client.ReadJournalEntries(5)
+	entries, err := client.ReadJournalEntries(context.Background(), 5)
 	if err != nil {
 		t.Fatalf("ReadJournalEntries error: %v", err)
 	}
@@ -356,7 +357,7 @@ func TestRemoteClientReadJournalEntriesError(t *testing.T) {
 	defer server.Close()
 
 	client := NewRemoteClient(server.URL, "key", "team")
-	_, err := client.ReadJournalEntries(10)
+	_, err := client.ReadJournalEntries(context.Background(), 10)
 	if err == nil {
 		t.Fatal("expected error for 500 response")
 	}
@@ -375,7 +376,7 @@ func TestRemoteClientStripsV1Suffix(t *testing.T) {
 
 	// URL with /v1 suffix should be stripped
 	client := NewRemoteClient(server.URL+"/v1", "key", "myteam")
-	_, err := client.ReadPosts(ListPostsOptions{Limit: 1})
+	_, err := client.ReadPosts(context.Background(), ListPostsOptions{Limit: 1})
 	if err != nil {
 		t.Fatalf("ReadPosts error: %v", err)
 	}
@@ -398,8 +399,10 @@ func TestRemoteClientRejectsOversizedErrorBody(t *testing.T) {
 
 	// Test all four methods that read error bodies.
 
+	ctx := context.Background()
+
 	// CreateJournalEntry
-	err := client.CreateJournalEntry(map[string]string{"feelings": "test"}, time.Now())
+	err := client.CreateJournalEntry(ctx, map[string]string{"feelings": "test"}, time.Now())
 	if err == nil {
 		t.Fatal("expected error from CreateJournalEntry")
 	}
@@ -409,7 +412,7 @@ func TestRemoteClientRejectsOversizedErrorBody(t *testing.T) {
 
 	// CreatePost
 	post := models.NewSocialPost("agent", "test", nil, nil)
-	err = client.CreatePost(post)
+	err = client.CreatePost(ctx, post)
 	if err == nil {
 		t.Fatal("expected error from CreatePost")
 	}
@@ -418,7 +421,7 @@ func TestRemoteClientRejectsOversizedErrorBody(t *testing.T) {
 	}
 
 	// ReadJournalEntries
-	_, err = client.ReadJournalEntries(10)
+	_, err = client.ReadJournalEntries(ctx, 10)
 	if err == nil {
 		t.Fatal("expected error from ReadJournalEntries")
 	}
@@ -427,7 +430,7 @@ func TestRemoteClientRejectsOversizedErrorBody(t *testing.T) {
 	}
 
 	// ReadPosts
-	_, err = client.ReadPosts(ListPostsOptions{})
+	_, err = client.ReadPosts(ctx, ListPostsOptions{})
 	if err == nil {
 		t.Fatal("expected error from ReadPosts")
 	}
@@ -463,11 +466,12 @@ func TestRemoteClientEscapesTeamID(t *testing.T) {
 	client := NewRemoteClient(server.URL, "key", dangerousTeamID)
 
 	// Exercise all four endpoints.
-	_ = client.CreateJournalEntry(map[string]string{"feelings": "test"}, time.Now())
-	_, _ = client.ReadJournalEntries(5)
+	ctx := context.Background()
+	_ = client.CreateJournalEntry(ctx, map[string]string{"feelings": "test"}, time.Now())
+	_, _ = client.ReadJournalEntries(ctx, 5)
 	post := models.NewSocialPost("agent", "test", nil, nil)
-	_ = client.CreatePost(post)
-	_, _ = client.ReadPosts(ListPostsOptions{})
+	_ = client.CreatePost(ctx, post)
+	_, _ = client.ReadPosts(ctx, ListPostsOptions{})
 
 	if len(capturedRawPaths) != 4 {
 		t.Fatalf("expected 4 requests, got %d", len(capturedRawPaths))
@@ -483,5 +487,22 @@ func TestRemoteClientEscapesTeamID(t *testing.T) {
 		if !strings.Contains(rawPath, "/teams/"+escapedTeamID) {
 			t.Errorf("request %d: expected escaped team ID in path, got %s", i, rawPath)
 		}
+	}
+}
+
+func TestRemoteClientRespectsContextCancellation(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(5 * time.Second)
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+
+	client := NewRemoteClient(srv.URL, "test-key", "test-team")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	err := client.CreateJournalEntry(ctx, map[string]string{"feelings": "test"}, time.Now())
+	if err == nil {
+		t.Fatal("expected error from cancelled context")
 	}
 }

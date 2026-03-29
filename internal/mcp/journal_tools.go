@@ -135,7 +135,7 @@ func (s *Server) handleProcessThoughts(ctx context.Context, req *gomcp.CallToolR
 
 	// Sync all sections to remote API if configured
 	if s.remote != nil {
-		if err := s.remote.CreateJournalEntry(allSections, timestamp); err != nil {
+		if err := s.remote.CreateJournalEntry(ctx, allSections, timestamp); err != nil {
 			resultParts = append(resultParts, fmt.Sprintf("Warning: remote sync failed: %v", err))
 		}
 	}

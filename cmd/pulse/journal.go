@@ -127,7 +127,7 @@ func runJournalSearch(cmd *cobra.Command, args []string) error {
 
 	// Include remote entries in search if configured
 	if globalRemoteClient != nil {
-		remoteEntries, err := globalRemoteClient.ReadJournalEntries(0)
+		remoteEntries, err := globalRemoteClient.ReadJournalEntries(cmd.Context(), 0)
 		if err != nil {
 			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to fetch remote entries: %v\n", err)
 		} else {
@@ -178,7 +178,7 @@ func runJournalList(cmd *cobra.Command, args []string) error {
 
 	// Merge remote entries if configured
 	if globalRemoteClient != nil {
-		remoteEntries, err := globalRemoteClient.ReadJournalEntries(journalLimit)
+		remoteEntries, err := globalRemoteClient.ReadJournalEntries(cmd.Context(), journalLimit)
 		if err != nil {
 			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to fetch remote entries: %v\n", err)
 		} else {

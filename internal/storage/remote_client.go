@@ -4,6 +4,7 @@ package storage
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -102,7 +103,7 @@ type remoteJournalPayload struct {
 }
 
 // CreateJournalEntry posts a journal entry to the remote API.
-func (r *RemoteClient) CreateJournalEntry(sections map[string]string, timestamp time.Time) error {
+func (r *RemoteClient) CreateJournalEntry(ctx context.Context, sections map[string]string, timestamp time.Time) error {
 	payload := remoteJournalPayload{
 		TeamID:    r.teamID,
 		Timestamp: timestamp.UnixMilli(),
@@ -114,7 +115,7 @@ func (r *RemoteClient) CreateJournalEntry(sections map[string]string, timestamp 
 		return fmt.Errorf("failed to marshal journal entry: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", r.teamPath()+"/journal/entries", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", r.teamPath()+"/journal/entries", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -152,8 +153,8 @@ type remoteJournalListResponse struct {
 }
 
 // ReadJournalEntries fetches journal entries from the remote API.
-func (r *RemoteClient) ReadJournalEntries(limit int) ([]*models.JournalEntry, error) {
-	req, err := http.NewRequest("GET", r.teamPath()+"/journal/entries", nil)
+func (r *RemoteClient) ReadJournalEntries(ctx context.Context, limit int) ([]*models.JournalEntry, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", r.teamPath()+"/journal/entries", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -200,7 +201,7 @@ func (r *RemoteClient) ReadJournalEntries(limit int) ([]*models.JournalEntry, er
 }
 
 // CreatePost sends a social post to the remote API.
-func (r *RemoteClient) CreatePost(post *models.SocialPost) error {
+func (r *RemoteClient) CreatePost(ctx context.Context, post *models.SocialPost) error {
 	payload := remotePostPayload{
 		Content:    post.Content,
 		AuthorName: post.AuthorName,
@@ -215,7 +216,7 @@ func (r *RemoteClient) CreatePost(post *models.SocialPost) error {
 		return fmt.Errorf("failed to marshal post: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", r.teamPath()+"/posts", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", r.teamPath()+"/posts", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -236,8 +237,8 @@ func (r *RemoteClient) CreatePost(post *models.SocialPost) error {
 }
 
 // ReadPosts fetches posts from the remote API.
-func (r *RemoteClient) ReadPosts(opts ListPostsOptions) ([]*models.SocialPost, error) {
-	req, err := http.NewRequest("GET", r.teamPath()+"/posts", nil)
+func (r *RemoteClient) ReadPosts(ctx context.Context, opts ListPostsOptions) ([]*models.SocialPost, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", r.teamPath()+"/posts", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
