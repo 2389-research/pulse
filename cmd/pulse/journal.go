@@ -240,7 +240,7 @@ func runJournalRead(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Type: %s\n", entry.Type)
 	fmt.Println()
 
-	for _, name := range models.ValidSections {
+	for _, name := range models.GetValidSections() {
 		content, ok := entry.Sections[name]
 		if !ok || content == "" {
 			continue

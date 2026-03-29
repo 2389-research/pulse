@@ -18,8 +18,8 @@ type JournalEntry struct {
 	Type      string // "project" or "user"
 }
 
-// ValidSections lists the allowed journal section names.
-var ValidSections = []string{
+// validSections lists the allowed journal section names.
+var validSections = []string{
 	"feelings",
 	"project_notes",
 	"user_context",
@@ -27,9 +27,16 @@ var ValidSections = []string{
 	"world_knowledge",
 }
 
+// GetValidSections returns a copy of the valid section names.
+func GetValidSections() []string {
+	out := make([]string, len(validSections))
+	copy(out, validSections)
+	return out
+}
+
 // IsValidSection returns true if the given section name is valid.
 func IsValidSection(name string) bool {
-	for _, s := range ValidSections {
+	for _, s := range validSections {
 		if s == name {
 			return true
 		}

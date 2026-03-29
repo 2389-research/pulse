@@ -259,7 +259,7 @@ func parseJournalEntry(path string, content string) (*models.JournalEntry, error
 func renderSections(sections map[string]string) string {
 	// Render in a stable order
 	var sb strings.Builder
-	for _, name := range models.ValidSections {
+	for _, name := range models.GetValidSections() {
 		content, ok := sections[name]
 		if !ok || content == "" {
 			continue
